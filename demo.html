@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+
+        .board {
+            display: grid;
+            gap: 1px;
+        }
+
+        .cell {
+            width: 30px;
+            height: 30px;
+            border: 1px solid #ccc;
+            text-align: center;
+            line-height: 30px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #333;
+            background-color: #eee;
+            user-select: none;
+        }
+
+        .revealed {
+            background-color: #ddd;
+        }
+
+        .mine {
+            background-color: #ff6347; /* Tomato color for mines */
+            color: #fff;
+            font-size: 20px;
+            line-height: 30px;
+        }
+
+        .flagged {
+            color: #ff6347;
+        }
+
+        .zero {
+            color: transparent;
+        }
+
+        .exploded {
+            background-color: #ff6347;
+            color: #fff;
+            font-size: 20px;
+        }
+
+        .one {
+            color: #0000ff; /* Blue color for number 1 */
+        }
+
+        .two {
+            color: #008000; /* Green color for number 2 */
+        }
+
+        .three {
+            color: #ff0000; /* Red color for number 3 */
+        }
+
+        .four {
+            color: #000080; /* Navy color for number 4 */
+        }
+
+        .five {
+            color: #800000; /* Maroon color for number 5 */
+        }
+
+        .six {
+            color: #008080; /* Teal color for number 6 */
+        }
+
+        .seven {
+            color: #800080; /* Purple color for number 7 */
+        }
+
+        .eight {
+            color: #000000; /* Black color for number 8 */
+        }
+    </style>
+    <title>扫雷游戏</title>
+</head>
+<body>
+
+<div>
+    <label for="difficulty">选择难度：</label>
+    <select id="difficulty" onchange="changeDifficulty()">
+        <option value="easy">简单</option>
+        <option value="medium">中级</option>
+        <option value="hard">高级</option>
+    </select>
+    <button onclick="resetGame()">重新开始</button>
+</div>
+<div id="gameBoard" class="board"></div>
+
+<script>
+    let boardSize = 10;
+    let mineCount = 10;
+    let board = [];
+    let revealed = [];
+
+    function initializeBoard() {
+        // 初始化游戏板
+        for (let i = 0; i < boardSize; i++) {
+            board[i] = [];
+            revealed[i] = [];
+            for (let j = 0; j < boardSize; j++) {
+                board[i][j] = 0; // 0 表示没有雷
+                revealed[i][j] = false;
+            }
+        }
+
+        // 随机布雷
+        placeMines();
+        // 计算周围雷的数量
+        calculateNumbers();
+    }
+
+    function placeMines() {
+        let minesToPlace = mineCount;
+
+        while (minesToPlace > 0) {
+            let row = Math.floor(Math.random() * boardSize);
+            let col = Math.floor(Math.random() * boardSize);
+
+            if (board[row][col] !== -1) {
+                board[row][col] = -1; // -1 表示雷
+                minesToPlace--;
+            }
+        }
+    }
+
+    function calculateNumbers() {
+        for (let i = 0; i < boardSize; i++) {
+            for (let j = 0; j < boardSize; j++) {
+                if (board[i][j] !== -1) {
+                    // 计算周围雷的数量
+                    board[i][j] = countSurroundingMines(i, j);
+                }
+            }
+        }
+    }
+
+    function countSurroundingMines(row, col) {
+        let count = 0;
+
+        for (let i = row - 1; i <= row + 1; i++) {
+            for (let j = col - 1; j <= col + 1; j++) {
+                if (i >= 0 && i < boardSize && j >= 0 && j < boardSize) {
+                    if (board[i][j] === -1) {
+                        count++;
+                    }
+                }
+            }
+        }
+
+        return count;
+    }
+
+    function revealCell(row, col) {
+        // 实现清雷逻辑
+        if (board[row][col] === -1) {
+            document.getElementById(`cell-${row}-${col}`).classList.add('mine', 'exploded');
+            alert("哈哈哈，你踩到雷了！重来吧！");
+            resetGame();
+        } else {
+            revealed[row][col] = true;
+            const cellElement = document.getElementById(`cell-${row}-${col}`);
+            cellElement.innerText = board[row][col];
+            cellElement.classList.add('revealed');
+
+            if (board[row][col] === 0) {
+                // 如果是0，递归展开周围的空格
+                expandZeros(row, col);
+            }
+        }
+    }
+
+    function flagMine(row, col) {
+        // 实现标记雷逻辑
+        if (!revealed[row][col]) {
+            const cellElement = document.getElementById(`cell-${row}-${col}`);
+            cellElement.innerText = "🚩";
+            cellElement.classList.add('flagged');
+        }
+    }
+
+    function expandZeros(row, col) {
+        for (let i = row - 1; i <= row + 1; i++) {
+            for (let j = col - 1; j <= col + 1; j++) {
+                if (i >= 0 && i < boardSize && j >= 0 && j < boardSize && !revealed[i][j]) {
+                    const cellElement = document.getElementById(`cell-${i}-${j}`);
+                    cellElement.classList.add('revealed', 'zero');
+                    revealed[i][j] = true;
+
+                    if (board[i][j] === 0) {
+                        // 递归展开周围的空格
+                        expandZeros(i, j);
+                    } else if (board[i][j] !== -1) {
+                        cellElement.innerText = board[i][j];
+                        cellElement.classList.add(numberClass(board[i][j]));
+                    }
+                }
+            }
+        }
+    }
+
+    function numberClass(number) {
+        switch (number) {
+            case 1:
+                return 'one';
+            case 2:
+                return 'two';
+            case 3:
+                return 'three';
+            case 4:
+                return 'four';
+            case 5:
+                return 'five';
+            case 6:
+                return 'six';
+            case 7:
+                return 'seven';
+            case 8:
+                return 'eight';
+            default:
+                return '';
+        }
+    }
+
+    function resetGame() {
+        // 重置游戏
+        const difficultySelect = document.getElementById("difficulty");
+        const selectedDifficulty = difficultySelect.value;
+
+        switch (selectedDifficulty) {
+            case "easy":
+                boardSize = 8;
+                mineCount = 10;
+                break;
+            case "medium":
+                boardSize = 10;
+                mineCount = 15;
+                break;
+            case "hard":
+                boardSize = 12;
+                mineCount = 20;
+                break;
+            default:
+                break;
+        }
+
+        board = [];
+        revealed = [];
+        initializeBoard();
+        renderBoard();
+    }
+
+    function renderBoard() {
+        const gameBoardElement = document.getElementById("gameBoard");
+        gameBoardElement.innerHTML = "";
+        gameBoardElement.style.gridTemplateColumns = `repeat(${boardSize}, 30px)`;
+
+        for (let i = 0; i < boardSize; i++) {
+            for (let j = 0; j < boardSize; j++) {
+                const cell = document.createElement("div");
+                cell.id = `cell-${i}-${j}`;
+                cell.classList.add("cell");
+                cell.addEventListener("click", () => handleCellClick(i, j));
+                cell.addEventListener("contextmenu", (event) => handleCellRightClick(event, i, j));
+                gameBoardElement.appendChild(cell);
+            }
+        }
+    }
+
+    function handleCellClick(row, col) {
+        if (!revealed[row][col]) {
+            revealCell(row, col);
+        }
+        checkWin();
+    }
+
+    function handleCellRightClick(event, row, col) {
+        event.preventDefault();
+        if (!revealed[row][col]) {
+            flagMine(row, col);
+        }
+    }
+
+    function checkWin() {
+        let allCellsRevealed = true;
+        for (let i = 0; i < boardSize; i++) {
+            for (let j = 0; j < boardSize; j++) {
+                if (board[i][j] !== -1 && !revealed[i][j]) {
+                    allCellsRevealed = false;
+                    break;
+                }
+            }
+            if (!allCellsRevealed) {
+                break;
+            }
+        }
+
+        if (allCellsRevealed) {
+            alert("Congratulations! You won!");
+            resetGame();
+        }
+    }
+
+    function changeDifficulty() {
+        resetGame();
+    }
+
+    // 初始化游戏
+    initializeBoard();
+    renderBoard();
+</script>
+</body>
+</html>
